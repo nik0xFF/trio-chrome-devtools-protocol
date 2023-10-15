@@ -10,6 +10,7 @@ from ..context import get_connection_context, get_session_context
 
 import cdp.network
 from cdp.network import (
+    AlternateProtocolUsage,
     AuthChallenge,
     AuthChallengeResponse,
     BlockedCookieWithReason,
@@ -17,25 +18,49 @@ from cdp.network import (
     BlockedSetCookieWithReason,
     CachedResource,
     CertificateTransparencyCompliance,
+    ClientSecurityState,
+    ConnectTiming,
     ConnectionType,
+    ContentEncoding,
+    ContentSecurityPolicySource,
+    ContentSecurityPolicyStatus,
     Cookie,
     CookieBlockedReason,
     CookieParam,
+    CookiePriority,
     CookieSameSite,
+    CookieSourceScheme,
+    CorsError,
+    CorsErrorStatus,
+    CrossOriginEmbedderPolicyStatus,
+    CrossOriginEmbedderPolicyValue,
+    CrossOriginOpenerPolicyStatus,
+    CrossOriginOpenerPolicyValue,
     DataReceived,
     ErrorReason,
     EventSourceMessageReceived,
     Headers,
+    IPAddressSpace,
     Initiator,
     InterceptionId,
     InterceptionStage,
+    LoadNetworkResourceOptions,
+    LoadNetworkResourcePageResult,
     LoaderId,
     LoadingFailed,
     LoadingFinished,
     MonotonicTime,
+    PostDataEntry,
+    PrivateNetworkRequestPolicy,
+    ReportId,
+    ReportStatus,
+    ReportingApiEndpoint,
+    ReportingApiEndpointsChangedForOrigin,
+    ReportingApiReport,
+    ReportingApiReportAdded,
+    ReportingApiReportUpdated,
     Request,
     RequestId,
-    RequestIntercepted,
     RequestPattern,
     RequestServedFromCache,
     RequestWillBeSent,
@@ -48,6 +73,8 @@ from cdp.network import (
     ResponseReceived,
     ResponseReceivedExtraInfo,
     SecurityDetails,
+    SecurityIsolationStatus,
+    ServiceWorkerResponseSource,
     SetCookieBlockedReason,
     SignedCertificateTimestamp,
     SignedExchangeError,
@@ -56,7 +83,14 @@ from cdp.network import (
     SignedExchangeInfo,
     SignedExchangeReceived,
     SignedExchangeSignature,
+    SubresourceWebBundleInnerResponseError,
+    SubresourceWebBundleInnerResponseParsed,
+    SubresourceWebBundleMetadataError,
+    SubresourceWebBundleMetadataReceived,
     TimeSinceEpoch,
+    TrustTokenOperationDone,
+    TrustTokenOperationType,
+    TrustTokenParams,
     WebSocketClosed,
     WebSocketCreated,
     WebSocketFrame,
@@ -66,53 +100,82 @@ from cdp.network import (
     WebSocketHandshakeResponseReceived,
     WebSocketRequest,
     WebSocketResponse,
-    WebSocketWillSendHandshakeRequest
+    WebSocketWillSendHandshakeRequest,
+    WebTransportClosed,
+    WebTransportConnectionEstablished,
+    WebTransportCreated
 )
+
+
+async def RequestIntercepted(
+        interception_id: InterceptionId,
+        request: Request,
+        frame_id: cdp.page.FrameId,
+        resource_type: ResourceType,
+        is_navigation_request: bool,
+        is_download: typing.Optional[bool],
+        redirect_url: typing.Optional[str],
+        auth_challenge: typing.Optional[AuthChallenge],
+        response_error_reason: typing.Optional[ErrorReason],
+        response_status_code: typing.Optional[int],
+        response_headers: typing.Optional[Headers],
+        request_id: typing.Optional[RequestId]
+    ) -> None:
+    '''
+    **EXPERIMENTAL**
+
+    Details of an intercepted HTTP request, which must be either allowed, blocked, modified or
+    mocked.
+    Deprecated, use Fetch.requestPaused instead.
+    '''
+    session = get_session_context('network.RequestIntercepted')
+    return await session.execute(cdp.network.RequestIntercepted(interception_id, request, frame_id, resource_type, is_navigation_request, is_download, redirect_url, auth_challenge, response_error_reason, response_status_code, response_headers, request_id))
 
 
 async def can_clear_browser_cache() -> bool:
     '''
-Tells whether clearing browser cache is supported.
+    Tells whether clearing browser cache is supported.
 
-.. deprecated:: 1.3
+    .. deprecated:: 1.3
 
-:returns: True if browser cache can be cleared.
-
-
-.. deprecated:: 1.3
-'''
+    :returns: True if browser cache can be cleared.
+    '''
     session = get_session_context('network.can_clear_browser_cache')
     return await session.execute(cdp.network.can_clear_browser_cache())
 
 
 async def can_clear_browser_cookies() -> bool:
     '''
-Tells whether clearing browser cookies is supported.
+    Tells whether clearing browser cookies is supported.
 
-.. deprecated:: 1.3
+    .. deprecated:: 1.3
 
-:returns: True if browser cookies can be cleared.
-
-
-.. deprecated:: 1.3
-'''
+    :returns: True if browser cookies can be cleared.
+    '''
     session = get_session_context('network.can_clear_browser_cookies')
     return await session.execute(cdp.network.can_clear_browser_cookies())
 
 
 async def can_emulate_network_conditions() -> bool:
     '''
-Tells whether emulation of network conditions is supported.
+    Tells whether emulation of network conditions is supported.
 
-.. deprecated:: 1.3
+    .. deprecated:: 1.3
 
-:returns: True if emulation of network conditions is supported.
-
-
-.. deprecated:: 1.3
-'''
+    :returns: True if emulation of network conditions is supported.
+    '''
     session = get_session_context('network.can_emulate_network_conditions')
     return await session.execute(cdp.network.can_emulate_network_conditions())
+
+
+async def clear_accepted_encodings_override() -> None:
+    '''
+    Clears accepted encodings set by setAcceptedEncodings
+
+    **EXPERIMENTAL**
+    '''
+    session = get_session_context('network.clear_accepted_encodings_override')
+    return await session.execute(cdp.network.clear_accepted_encodings_override())
 
 
 async def clear_browser_cache() -> None:
@@ -142,28 +205,25 @@ async def continue_intercepted_request(
         auth_challenge_response: typing.Optional[AuthChallengeResponse] = None
     ) -> None:
     '''
-Response to Network.requestIntercepted which either modifies the request to continue with any
-modifications, or blocks it, or completes it with the provided response bytes. If a network
-fetch occurs as a result which encounters a redirect an additional Network.requestIntercepted
-event will be sent with the same InterceptionId.
-Deprecated, use Fetch.continueRequest, Fetch.fulfillRequest and Fetch.failRequest instead.
+    Response to Network.requestIntercepted which either modifies the request to continue with any
+    modifications, or blocks it, or completes it with the provided response bytes. If a network
+    fetch occurs as a result which encounters a redirect an additional Network.requestIntercepted
+    event will be sent with the same InterceptionId.
+    Deprecated, use Fetch.continueRequest, Fetch.fulfillRequest and Fetch.failRequest instead.
 
-.. deprecated:: 1.3
+    .. deprecated:: 1.3
 
-**EXPERIMENTAL**
+    **EXPERIMENTAL**
 
-:param interception_id:
-:param error_reason: *(Optional)* If set this causes the request to fail with the given reason. Passing ```Aborted```` for requests marked with ````isNavigationRequest``` also cancels the navigation. Must not be set in response to an authChallenge.
-:param raw_response: *(Optional)* If set the requests completes using with the provided base64 encoded raw response, including HTTP status line and headers etc... Must not be set in response to an authChallenge.
-:param url: *(Optional)* If set the request url will be modified in a way that's not observable by page. Must not be set in response to an authChallenge.
-:param method: *(Optional)* If set this allows the request method to be overridden. Must not be set in response to an authChallenge.
-:param post_data: *(Optional)* If set this allows postData to be set. Must not be set in response to an authChallenge.
-:param headers: *(Optional)* If set this allows the request headers to be changed. Must not be set in response to an authChallenge.
-:param auth_challenge_response: *(Optional)* Response to a requestIntercepted with an authChallenge. Must not be set otherwise.
-
-
-.. deprecated:: 1.3
-'''
+    :param interception_id:
+    :param error_reason: *(Optional)* If set this causes the request to fail with the given reason. Passing ```Aborted```` for requests marked with ````isNavigationRequest``` also cancels the navigation. Must not be set in response to an authChallenge.
+    :param raw_response: *(Optional)* If set the requests completes using with the provided base64 encoded raw response, including HTTP status line and headers etc... Must not be set in response to an authChallenge. (Encoded as a base64 string when passed over JSON)
+    :param url: *(Optional)* If set the request url will be modified in a way that's not observable by page. Must not be set in response to an authChallenge.
+    :param method: *(Optional)* If set this allows the request method to be overridden. Must not be set in response to an authChallenge.
+    :param post_data: *(Optional)* If set this allows postData to be set. Must not be set in response to an authChallenge.
+    :param headers: *(Optional)* If set this allows the request headers to be changed. Must not be set in response to an authChallenge.
+    :param auth_challenge_response: *(Optional)* Response to a requestIntercepted with an authChallenge. Must not be set otherwise.
+    '''
     session = get_session_context('network.continue_intercepted_request')
     return await session.execute(cdp.network.continue_intercepted_request(interception_id, error_reason, raw_response, url, method, post_data, headers, auth_challenge_response))
 
@@ -230,10 +290,28 @@ async def enable(
     return await session.execute(cdp.network.enable(max_total_buffer_size, max_resource_buffer_size, max_post_data_size))
 
 
+async def enable_reporting_api(
+        enable: bool
+    ) -> None:
+    '''
+    Enables tracking for the Reporting API, events generated by the Reporting API will now be delivered to the client.
+    Enabling triggers 'reportingApiReportAdded' for all existing reports.
+
+    **EXPERIMENTAL**
+
+    :param enable: Whether to enable or disable events for the Reporting API
+    '''
+    session = get_session_context('network.enable_reporting_api')
+    return await session.execute(cdp.network.enable_reporting_api(enable))
+
+
 async def get_all_cookies() -> typing.List[Cookie]:
     '''
     Returns all browser cookies. Depending on the backend support, will return detailed cookie
     information in the ``cookies`` field.
+    Deprecated. Use Storage.getCookies instead.
+
+    .. deprecated:: 1.3
 
     :returns: Array of cookie objects.
     '''
@@ -263,7 +341,7 @@ async def get_cookies(
     Returns all browser cookies for the current URL. Depending on the backend support, will return
     detailed cookie information in the ``cookies`` field.
 
-    :param urls: *(Optional)* The list of URLs for which applicable cookies will be fetched
+    :param urls: *(Optional)* The list of URLs for which applicable cookies will be fetched. If not specified, it's assumed to be set to the list containing the URLs of the page and all of its subframes.
     :returns: Array of cookie objects.
     '''
     session = get_session_context('network.get_cookies')
@@ -292,8 +370,8 @@ async def get_response_body(
     :param request_id: Identifier of the network request to get content for.
     :returns: A tuple with the following items:
 
-        0. **body** – Response body.
-        1. **base64Encoded** – True, if content was sent as base64.
+        0. **body** - Response body.
+        1. **base64Encoded** - True, if content was sent as base64.
     '''
     session = get_session_context('network.get_response_body')
     return await session.execute(cdp.network.get_response_body(request_id))
@@ -310,11 +388,45 @@ async def get_response_body_for_interception(
     :param interception_id: Identifier for the intercepted request to get body for.
     :returns: A tuple with the following items:
 
-        0. **body** – Response body.
-        1. **base64Encoded** – True, if content was sent as base64.
+        0. **body** - Response body.
+        1. **base64Encoded** - True, if content was sent as base64.
     '''
     session = get_session_context('network.get_response_body_for_interception')
     return await session.execute(cdp.network.get_response_body_for_interception(interception_id))
+
+
+async def get_security_isolation_status(
+        frame_id: typing.Optional[cdp.page.FrameId] = None
+    ) -> SecurityIsolationStatus:
+    '''
+    Returns information about the COEP/COOP isolation status.
+
+    **EXPERIMENTAL**
+
+    :param frame_id: *(Optional)* If no frameId is provided, the status of the target is provided.
+    :returns: 
+    '''
+    session = get_session_context('network.get_security_isolation_status')
+    return await session.execute(cdp.network.get_security_isolation_status(frame_id))
+
+
+async def load_network_resource(
+        url: str,
+        options: LoadNetworkResourceOptions,
+        frame_id: typing.Optional[cdp.page.FrameId] = None
+    ) -> LoadNetworkResourcePageResult:
+    '''
+    Fetches the resource and returns the content.
+
+    **EXPERIMENTAL**
+
+    :param url: URL of the resource to get content for.
+    :param options: Options for the request.
+    :param frame_id: *(Optional)* Frame id to get the resource for. Mandatory for frame targets, and should be omitted for worker targets.
+    :returns: 
+    '''
+    session = get_session_context('network.load_network_resource')
+    return await session.execute(cdp.network.load_network_resource(url, options, frame_id))
 
 
 async def replay_xhr(
@@ -352,6 +464,34 @@ async def search_in_response_body(
     '''
     session = get_session_context('network.search_in_response_body')
     return await session.execute(cdp.network.search_in_response_body(request_id, query, case_sensitive, is_regex))
+
+
+async def set_accepted_encodings(
+        encodings: typing.List[ContentEncoding]
+    ) -> None:
+    '''
+    Sets a list of content encodings that will be accepted. Empty list means no encoding is accepted.
+
+    **EXPERIMENTAL**
+
+    :param encodings: List of accepted content encodings.
+    '''
+    session = get_session_context('network.set_accepted_encodings')
+    return await session.execute(cdp.network.set_accepted_encodings(encodings))
+
+
+async def set_attach_debug_stack(
+        enabled: bool
+    ) -> None:
+    '''
+    Specifies whether to attach a page script stack id in requests
+
+    **EXPERIMENTAL**
+
+    :param enabled: Whether to attach a page script stack for debugging purpose.
+    '''
+    session = get_session_context('network.set_attach_debug_stack')
+    return await session.execute(cdp.network.set_attach_debug_stack(enabled))
 
 
 async def set_blocked_ur_ls(
@@ -403,24 +543,34 @@ async def set_cookie(
         secure: typing.Optional[bool] = None,
         http_only: typing.Optional[bool] = None,
         same_site: typing.Optional[CookieSameSite] = None,
-        expires: typing.Optional[TimeSinceEpoch] = None
+        expires: typing.Optional[TimeSinceEpoch] = None,
+        priority: typing.Optional[CookiePriority] = None,
+        same_party: typing.Optional[bool] = None,
+        source_scheme: typing.Optional[CookieSourceScheme] = None,
+        source_port: typing.Optional[int] = None,
+        partition_key: typing.Optional[str] = None
     ) -> bool:
     '''
     Sets a cookie with the given cookie data; may overwrite equivalent cookies if they exist.
 
     :param name: Cookie name.
     :param value: Cookie value.
-    :param url: *(Optional)* The request-URI to associate with the setting of the cookie. This value can affect the default domain and path values of the created cookie.
+    :param url: *(Optional)* The request-URI to associate with the setting of the cookie. This value can affect the default domain, path, source port, and source scheme values of the created cookie.
     :param domain: *(Optional)* Cookie domain.
     :param path: *(Optional)* Cookie path.
     :param secure: *(Optional)* True if cookie is secure.
     :param http_only: *(Optional)* True if cookie is http-only.
     :param same_site: *(Optional)* Cookie SameSite type.
     :param expires: *(Optional)* Cookie expiration date, session cookie if not set
-    :returns: True if successfully set cookie.
+    :param priority: **(EXPERIMENTAL)** *(Optional)* Cookie Priority type.
+    :param same_party: **(EXPERIMENTAL)** *(Optional)* True if cookie is SameParty.
+    :param source_scheme: **(EXPERIMENTAL)** *(Optional)* Cookie source scheme type.
+    :param source_port: **(EXPERIMENTAL)** *(Optional)* Cookie source port. Valid values are {-1, [1, 65535]}, -1 indicates an unspecified port. An unspecified port value allows protocol clients to emulate legacy cookie scope for the port. This is a temporary ability and it will be removed in the future.
+    :param partition_key: **(EXPERIMENTAL)** *(Optional)* Cookie partition key. The site of the top-level URL the browser was visiting at the start of the request to the endpoint that set the cookie. If not set, the cookie will be set as not partitioned.
+    :returns: Always set to true. If an error occurs, the response indicates protocol error.
     '''
     session = get_session_context('network.set_cookie')
-    return await session.execute(cdp.network.set_cookie(name, value, url, domain, path, secure, http_only, same_site, expires))
+    return await session.execute(cdp.network.set_cookie(name, value, url, domain, path, secure, http_only, same_site, expires, priority, same_party, source_scheme, source_port, partition_key))
 
 
 async def set_cookies(
@@ -433,22 +583,6 @@ async def set_cookies(
     '''
     session = get_session_context('network.set_cookies')
     return await session.execute(cdp.network.set_cookies(cookies))
-
-
-async def set_data_size_limits_for_test(
-        max_total_size: int,
-        max_resource_size: int
-    ) -> None:
-    '''
-    For testing.
-
-    **EXPERIMENTAL**
-
-    :param max_total_size: Maximum total buffer size.
-    :param max_resource_size: Maximum per-resource size.
-    '''
-    session = get_session_context('network.set_data_size_limits_for_test')
-    return await session.execute(cdp.network.set_data_size_limits_for_test(max_total_size, max_resource_size))
 
 
 async def set_extra_http_headers(
@@ -467,18 +601,15 @@ async def set_request_interception(
         patterns: typing.List[RequestPattern]
     ) -> None:
     '''
-Sets the requests to intercept that match the provided patterns and optionally resource types.
-Deprecated, please use Fetch.enable instead.
+    Sets the requests to intercept that match the provided patterns and optionally resource types.
+    Deprecated, please use Fetch.enable instead.
 
-.. deprecated:: 1.3
+    .. deprecated:: 1.3
 
-**EXPERIMENTAL**
+    **EXPERIMENTAL**
 
-:param patterns: Requests matching any of these patterns will be forwarded and wait for the corresponding continueInterceptedRequest call.
-
-
-.. deprecated:: 1.3
-'''
+    :param patterns: Requests matching any of these patterns will be forwarded and wait for the corresponding continueInterceptedRequest call.
+    '''
     session = get_session_context('network.set_request_interception')
     return await session.execute(cdp.network.set_request_interception(patterns))
 
@@ -486,7 +617,8 @@ Deprecated, please use Fetch.enable instead.
 async def set_user_agent_override(
         user_agent: str,
         accept_language: typing.Optional[str] = None,
-        platform: typing.Optional[str] = None
+        platform: typing.Optional[str] = None,
+        user_agent_metadata: typing.Optional[cdp.emulation.UserAgentMetadata] = None
     ) -> None:
     '''
     Allows overriding user agent with the given string.
@@ -494,9 +626,10 @@ async def set_user_agent_override(
     :param user_agent: User agent to use.
     :param accept_language: *(Optional)* Browser langugage to emulate.
     :param platform: *(Optional)* The platform navigator.platform should return.
+    :param user_agent_metadata: **(EXPERIMENTAL)** *(Optional)* To be sent in Sec-CH-UA-* headers and returned in navigator.userAgentData
     '''
     session = get_session_context('network.set_user_agent_override')
-    return await session.execute(cdp.network.set_user_agent_override(user_agent, accept_language, platform))
+    return await session.execute(cdp.network.set_user_agent_override(user_agent, accept_language, platform, user_agent_metadata))
 
 
 async def take_response_body_for_interception_as_stream(

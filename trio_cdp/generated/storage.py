@@ -10,13 +10,53 @@ from ..context import get_connection_context, get_session_context
 
 import cdp.storage
 from cdp.storage import (
+    AttributionReportingAggregationKeysEntry,
+    AttributionReportingEventReportWindows,
+    AttributionReportingFilterDataEntry,
+    AttributionReportingSourceRegistered,
+    AttributionReportingSourceRegistration,
+    AttributionReportingSourceRegistrationResult,
+    AttributionReportingSourceType,
     CacheStorageContentUpdated,
     CacheStorageListUpdated,
     IndexedDBContentUpdated,
     IndexedDBListUpdated,
+    InterestGroupAccessType,
+    InterestGroupAccessed,
+    InterestGroupAd,
+    InterestGroupDetails,
+    SerializedStorageKey,
+    SharedStorageAccessParams,
+    SharedStorageAccessType,
+    SharedStorageAccessed,
+    SharedStorageEntry,
+    SharedStorageMetadata,
+    SharedStorageReportingMetadata,
+    SharedStorageUrlWithMetadata,
+    SignedInt64AsBase10,
+    StorageBucket,
+    StorageBucketCreatedOrUpdated,
+    StorageBucketDeleted,
+    StorageBucketInfo,
+    StorageBucketsDurability,
     StorageType,
+    TrustTokens,
+    UnsignedInt128AsBase16,
+    UnsignedInt64AsBase10,
     UsageForType
 )
+
+
+async def clear_cookies(
+        browser_context_id: typing.Optional[cdp.browser.BrowserContextID] = None
+    ) -> None:
+    '''
+    Clears cookies.
+
+    :param browser_context_id: *(Optional)* Browser context to use when called on the browser endpoint.
+    '''
+    session = get_session_context('storage.clear_cookies')
+    return await session.execute(cdp.storage.clear_cookies(browser_context_id))
 
 
 async def clear_data_for_origin(
@@ -33,21 +73,330 @@ async def clear_data_for_origin(
     return await session.execute(cdp.storage.clear_data_for_origin(origin, storage_types))
 
 
+async def clear_data_for_storage_key(
+        storage_key: str,
+        storage_types: str
+    ) -> None:
+    '''
+    Clears storage for storage key.
+
+    :param storage_key: Storage key.
+    :param storage_types: Comma separated list of StorageType to clear.
+    '''
+    session = get_session_context('storage.clear_data_for_storage_key')
+    return await session.execute(cdp.storage.clear_data_for_storage_key(storage_key, storage_types))
+
+
+async def clear_shared_storage_entries(
+        owner_origin: str
+    ) -> None:
+    '''
+    Clears all entries for a given origin's shared storage.
+
+    **EXPERIMENTAL**
+
+    :param owner_origin:
+    '''
+    session = get_session_context('storage.clear_shared_storage_entries')
+    return await session.execute(cdp.storage.clear_shared_storage_entries(owner_origin))
+
+
+async def clear_trust_tokens(
+        issuer_origin: str
+    ) -> bool:
+    '''
+    Removes all Trust Tokens issued by the provided issuerOrigin.
+    Leaves other stored data, including the issuer's Redemption Records, intact.
+
+    **EXPERIMENTAL**
+
+    :param issuer_origin:
+    :returns: True if any tokens were deleted, false otherwise.
+    '''
+    session = get_session_context('storage.clear_trust_tokens')
+    return await session.execute(cdp.storage.clear_trust_tokens(issuer_origin))
+
+
+async def delete_shared_storage_entry(
+        owner_origin: str,
+        key: str
+    ) -> None:
+    '''
+    Deletes entry for ``key`` (if it exists) for a given origin's shared storage.
+
+    **EXPERIMENTAL**
+
+    :param owner_origin:
+    :param key:
+    '''
+    session = get_session_context('storage.delete_shared_storage_entry')
+    return await session.execute(cdp.storage.delete_shared_storage_entry(owner_origin, key))
+
+
+async def delete_storage_bucket(
+        bucket: StorageBucket
+    ) -> None:
+    '''
+    Deletes the Storage Bucket with the given storage key and bucket name.
+
+    **EXPERIMENTAL**
+
+    :param bucket:
+    '''
+    session = get_session_context('storage.delete_storage_bucket')
+    return await session.execute(cdp.storage.delete_storage_bucket(bucket))
+
+
+async def get_cookies(
+        browser_context_id: typing.Optional[cdp.browser.BrowserContextID] = None
+    ) -> typing.List[cdp.network.Cookie]:
+    '''
+    Returns all browser cookies.
+
+    :param browser_context_id: *(Optional)* Browser context to use when called on the browser endpoint.
+    :returns: Array of cookie objects.
+    '''
+    session = get_session_context('storage.get_cookies')
+    return await session.execute(cdp.storage.get_cookies(browser_context_id))
+
+
+async def get_interest_group_details(
+        owner_origin: str,
+        name: str
+    ) -> InterestGroupDetails:
+    '''
+    Gets details for a named interest group.
+
+    **EXPERIMENTAL**
+
+    :param owner_origin:
+    :param name:
+    :returns: 
+    '''
+    session = get_session_context('storage.get_interest_group_details')
+    return await session.execute(cdp.storage.get_interest_group_details(owner_origin, name))
+
+
+async def get_shared_storage_entries(
+        owner_origin: str
+    ) -> typing.List[SharedStorageEntry]:
+    '''
+    Gets the entries in an given origin's shared storage.
+
+    **EXPERIMENTAL**
+
+    :param owner_origin:
+    :returns: 
+    '''
+    session = get_session_context('storage.get_shared_storage_entries')
+    return await session.execute(cdp.storage.get_shared_storage_entries(owner_origin))
+
+
+async def get_shared_storage_metadata(
+        owner_origin: str
+    ) -> SharedStorageMetadata:
+    '''
+    Gets metadata for an origin's shared storage.
+
+    **EXPERIMENTAL**
+
+    :param owner_origin:
+    :returns: 
+    '''
+    session = get_session_context('storage.get_shared_storage_metadata')
+    return await session.execute(cdp.storage.get_shared_storage_metadata(owner_origin))
+
+
+async def get_storage_key_for_frame(
+        frame_id: cdp.page.FrameId
+    ) -> SerializedStorageKey:
+    '''
+    Returns a storage key given a frame id.
+
+    :param frame_id:
+    :returns: 
+    '''
+    session = get_session_context('storage.get_storage_key_for_frame')
+    return await session.execute(cdp.storage.get_storage_key_for_frame(frame_id))
+
+
+async def get_trust_tokens() -> typing.List[TrustTokens]:
+    '''
+    Returns the number of stored Trust Tokens per issuer for the
+    current browsing context.
+
+    **EXPERIMENTAL**
+
+    :returns: 
+    '''
+    session = get_session_context('storage.get_trust_tokens')
+    return await session.execute(cdp.storage.get_trust_tokens())
+
+
 async def get_usage_and_quota(
         origin: str
-    ) -> typing.Tuple[float, float, typing.List[UsageForType]]:
+    ) -> typing.Tuple[float, float, bool, typing.List[UsageForType]]:
     '''
     Returns usage and quota in bytes.
 
     :param origin: Security origin.
     :returns: A tuple with the following items:
 
-        0. **usage** – Storage usage (bytes).
-        1. **quota** – Storage quota (bytes).
-        2. **usageBreakdown** – Storage usage per type (bytes).
+        0. **usage** - Storage usage (bytes).
+        1. **quota** - Storage quota (bytes).
+        2. **overrideActive** - Whether or not the origin has an active storage quota override
+        3. **usageBreakdown** - Storage usage per type (bytes).
     '''
     session = get_session_context('storage.get_usage_and_quota')
     return await session.execute(cdp.storage.get_usage_and_quota(origin))
+
+
+async def override_quota_for_origin(
+        origin: str,
+        quota_size: typing.Optional[float] = None
+    ) -> None:
+    '''
+    Override quota for the specified origin
+
+    **EXPERIMENTAL**
+
+    :param origin: Security origin.
+    :param quota_size: *(Optional)* The quota size (in bytes) to override the original quota with. If this is called multiple times, the overridden quota will be equal to the quotaSize provided in the final call. If this is called without specifying a quotaSize, the quota will be reset to the default value for the specified origin. If this is called multiple times with different origins, the override will be maintained for each origin until it is disabled (called without a quotaSize).
+    '''
+    session = get_session_context('storage.override_quota_for_origin')
+    return await session.execute(cdp.storage.override_quota_for_origin(origin, quota_size))
+
+
+async def reset_shared_storage_budget(
+        owner_origin: str
+    ) -> None:
+    '''
+    Resets the budget for ``ownerOrigin`` by clearing all budget withdrawals.
+
+    **EXPERIMENTAL**
+
+    :param owner_origin:
+    '''
+    session = get_session_context('storage.reset_shared_storage_budget')
+    return await session.execute(cdp.storage.reset_shared_storage_budget(owner_origin))
+
+
+async def run_bounce_tracking_mitigations() -> typing.List[str]:
+    '''
+    Deletes state for sites identified as potential bounce trackers, immediately.
+
+    **EXPERIMENTAL**
+
+    :returns: 
+    '''
+    session = get_session_context('storage.run_bounce_tracking_mitigations')
+    return await session.execute(cdp.storage.run_bounce_tracking_mitigations())
+
+
+async def set_attribution_reporting_local_testing_mode(
+        enabled: bool
+    ) -> None:
+    '''
+    https://wicg.github.io/attribution-reporting-api/
+
+    **EXPERIMENTAL**
+
+    :param enabled: If enabled, noise is suppressed and reports are sent immediately.
+    '''
+    session = get_session_context('storage.set_attribution_reporting_local_testing_mode')
+    return await session.execute(cdp.storage.set_attribution_reporting_local_testing_mode(enabled))
+
+
+async def set_attribution_reporting_tracking(
+        enable: bool
+    ) -> None:
+    '''
+    Enables/disables issuing of Attribution Reporting events.
+
+    **EXPERIMENTAL**
+
+    :param enable:
+    '''
+    session = get_session_context('storage.set_attribution_reporting_tracking')
+    return await session.execute(cdp.storage.set_attribution_reporting_tracking(enable))
+
+
+async def set_cookies(
+        cookies: typing.List[cdp.network.CookieParam],
+        browser_context_id: typing.Optional[cdp.browser.BrowserContextID] = None
+    ) -> None:
+    '''
+    Sets given cookies.
+
+    :param cookies: Cookies to be set.
+    :param browser_context_id: *(Optional)* Browser context to use when called on the browser endpoint.
+    '''
+    session = get_session_context('storage.set_cookies')
+    return await session.execute(cdp.storage.set_cookies(cookies, browser_context_id))
+
+
+async def set_interest_group_tracking(
+        enable: bool
+    ) -> None:
+    '''
+    Enables/Disables issuing of interestGroupAccessed events.
+
+    **EXPERIMENTAL**
+
+    :param enable:
+    '''
+    session = get_session_context('storage.set_interest_group_tracking')
+    return await session.execute(cdp.storage.set_interest_group_tracking(enable))
+
+
+async def set_shared_storage_entry(
+        owner_origin: str,
+        key: str,
+        value: str,
+        ignore_if_present: typing.Optional[bool] = None
+    ) -> None:
+    '''
+    Sets entry with ``key`` and ``value`` for a given origin's shared storage.
+
+    **EXPERIMENTAL**
+
+    :param owner_origin:
+    :param key:
+    :param value:
+    :param ignore_if_present: *(Optional)* If ```ignoreIfPresent```` is included and true, then only sets the entry if ````key``` doesn't already exist.
+    '''
+    session = get_session_context('storage.set_shared_storage_entry')
+    return await session.execute(cdp.storage.set_shared_storage_entry(owner_origin, key, value, ignore_if_present))
+
+
+async def set_shared_storage_tracking(
+        enable: bool
+    ) -> None:
+    '''
+    Enables/disables issuing of sharedStorageAccessed events.
+
+    **EXPERIMENTAL**
+
+    :param enable:
+    '''
+    session = get_session_context('storage.set_shared_storage_tracking')
+    return await session.execute(cdp.storage.set_shared_storage_tracking(enable))
+
+
+async def set_storage_bucket_tracking(
+        storage_key: str,
+        enable: bool
+    ) -> None:
+    '''
+    Set tracking for a storage key's buckets.
+
+    **EXPERIMENTAL**
+
+    :param storage_key:
+    :param enable:
+    '''
+    session = get_session_context('storage.set_storage_bucket_tracking')
+    return await session.execute(cdp.storage.set_storage_bucket_tracking(storage_key, enable))
 
 
 async def track_cache_storage_for_origin(
@@ -62,6 +411,18 @@ async def track_cache_storage_for_origin(
     return await session.execute(cdp.storage.track_cache_storage_for_origin(origin))
 
 
+async def track_cache_storage_for_storage_key(
+        storage_key: str
+    ) -> None:
+    '''
+    Registers storage key to be notified when an update occurs to its cache storage list.
+
+    :param storage_key: Storage key.
+    '''
+    session = get_session_context('storage.track_cache_storage_for_storage_key')
+    return await session.execute(cdp.storage.track_cache_storage_for_storage_key(storage_key))
+
+
 async def track_indexed_db_for_origin(
         origin: str
     ) -> None:
@@ -72,6 +433,18 @@ async def track_indexed_db_for_origin(
     '''
     session = get_session_context('storage.track_indexed_db_for_origin')
     return await session.execute(cdp.storage.track_indexed_db_for_origin(origin))
+
+
+async def track_indexed_db_for_storage_key(
+        storage_key: str
+    ) -> None:
+    '''
+    Registers storage key to be notified when an update occurs to its IndexedDB.
+
+    :param storage_key: Storage key.
+    '''
+    session = get_session_context('storage.track_indexed_db_for_storage_key')
+    return await session.execute(cdp.storage.track_indexed_db_for_storage_key(storage_key))
 
 
 async def untrack_cache_storage_for_origin(
@@ -86,6 +459,18 @@ async def untrack_cache_storage_for_origin(
     return await session.execute(cdp.storage.untrack_cache_storage_for_origin(origin))
 
 
+async def untrack_cache_storage_for_storage_key(
+        storage_key: str
+    ) -> None:
+    '''
+    Unregisters storage key from receiving notifications for cache storage.
+
+    :param storage_key: Storage key.
+    '''
+    session = get_session_context('storage.untrack_cache_storage_for_storage_key')
+    return await session.execute(cdp.storage.untrack_cache_storage_for_storage_key(storage_key))
+
+
 async def untrack_indexed_db_for_origin(
         origin: str
     ) -> None:
@@ -96,3 +481,15 @@ async def untrack_indexed_db_for_origin(
     '''
     session = get_session_context('storage.untrack_indexed_db_for_origin')
     return await session.execute(cdp.storage.untrack_indexed_db_for_origin(origin))
+
+
+async def untrack_indexed_db_for_storage_key(
+        storage_key: str
+    ) -> None:
+    '''
+    Unregisters storage key from receiving notifications for IndexedDB.
+
+    :param storage_key: Storage key.
+    '''
+    session = get_session_context('storage.untrack_indexed_db_for_storage_key')
+    return await session.execute(cdp.storage.untrack_indexed_db_for_storage_key(storage_key))

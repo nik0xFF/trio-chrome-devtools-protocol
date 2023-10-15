@@ -46,16 +46,20 @@ async def delete_entry(
 
 
 async def request_cache_names(
-        security_origin: str
+        security_origin: typing.Optional[str] = None,
+        storage_key: typing.Optional[str] = None,
+        storage_bucket: typing.Optional[cdp.storage.StorageBucket] = None
     ) -> typing.List[Cache]:
     '''
     Requests cache names.
 
-    :param security_origin: Security origin.
+    :param security_origin: *(Optional)* At least and at most one of securityOrigin, storageKey, storageBucket must be specified. Security origin.
+    :param storage_key: *(Optional)* Storage key.
+    :param storage_bucket: *(Optional)* Storage bucket. If not specified, it uses the default bucket.
     :returns: Caches for the security origin.
     '''
     session = get_session_context('cache_storage.request_cache_names')
-    return await session.execute(cdp.cache_storage.request_cache_names(security_origin))
+    return await session.execute(cdp.cache_storage.request_cache_names(security_origin, storage_key, storage_bucket))
 
 
 async def request_cached_response(
@@ -77,21 +81,21 @@ async def request_cached_response(
 
 async def request_entries(
         cache_id: CacheId,
-        skip_count: int,
-        page_size: int,
+        skip_count: typing.Optional[int] = None,
+        page_size: typing.Optional[int] = None,
         path_filter: typing.Optional[str] = None
     ) -> typing.Tuple[typing.List[DataEntry], float]:
     '''
     Requests data from cache.
 
     :param cache_id: ID of cache to get entries from.
-    :param skip_count: Number of records to skip.
-    :param page_size: Number of records to fetch.
+    :param skip_count: *(Optional)* Number of records to skip.
+    :param page_size: *(Optional)* Number of records to fetch.
     :param path_filter: *(Optional)* If present, only return the entries containing this substring in the path
     :returns: A tuple with the following items:
 
-        0. **cacheDataEntries** – Array of object store data entries.
-        1. **returnCount** – Count of returned entries from this storage. If pathFilter is empty, it is the count of all entries from this storage.
+        0. **cacheDataEntries** - Array of object store data entries.
+        1. **returnCount** - Count of returned entries from this storage. If pathFilter is empty, it is the count of all entries from this storage.
     '''
     session = get_session_context('cache_storage.request_entries')
     return await session.execute(cdp.cache_storage.request_entries(cache_id, skip_count, page_size, path_filter))

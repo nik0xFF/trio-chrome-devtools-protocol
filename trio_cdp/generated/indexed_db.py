@@ -21,51 +21,63 @@ from cdp.indexed_db import (
 
 
 async def clear_object_store(
-        security_origin: str,
         database_name: str,
-        object_store_name: str
+        object_store_name: str,
+        security_origin: typing.Optional[str] = None,
+        storage_key: typing.Optional[str] = None,
+        storage_bucket: typing.Optional[cdp.storage.StorageBucket] = None
     ) -> None:
     '''
     Clears all entries from an object store.
 
-    :param security_origin: Security origin.
     :param database_name: Database name.
     :param object_store_name: Object store name.
+    :param security_origin: *(Optional)* At least and at most one of securityOrigin, storageKey, or storageBucket must be specified. Security origin.
+    :param storage_key: *(Optional)* Storage key.
+    :param storage_bucket: *(Optional)* Storage bucket. If not specified, it uses the default bucket.
     '''
     session = get_session_context('indexed_db.clear_object_store')
-    return await session.execute(cdp.indexed_db.clear_object_store(security_origin, database_name, object_store_name))
+    return await session.execute(cdp.indexed_db.clear_object_store(database_name, object_store_name, security_origin, storage_key, storage_bucket))
 
 
 async def delete_database(
-        security_origin: str,
-        database_name: str
+        database_name: str,
+        security_origin: typing.Optional[str] = None,
+        storage_key: typing.Optional[str] = None,
+        storage_bucket: typing.Optional[cdp.storage.StorageBucket] = None
     ) -> None:
     '''
     Deletes a database.
 
-    :param security_origin: Security origin.
     :param database_name: Database name.
+    :param security_origin: *(Optional)* At least and at most one of securityOrigin, storageKey, or storageBucket must be specified. Security origin.
+    :param storage_key: *(Optional)* Storage key.
+    :param storage_bucket: *(Optional)* Storage bucket. If not specified, it uses the default bucket.
     '''
     session = get_session_context('indexed_db.delete_database')
-    return await session.execute(cdp.indexed_db.delete_database(security_origin, database_name))
+    return await session.execute(cdp.indexed_db.delete_database(database_name, security_origin, storage_key, storage_bucket))
 
 
 async def delete_object_store_entries(
-        security_origin: str,
         database_name: str,
         object_store_name: str,
-        key_range: KeyRange
+        key_range: KeyRange,
+        security_origin: typing.Optional[str] = None,
+        storage_key: typing.Optional[str] = None,
+        storage_bucket: typing.Optional[cdp.storage.StorageBucket] = None
     ) -> None:
     '''
     Delete a range of entries from an object store
 
-    :param security_origin:
     :param database_name:
     :param object_store_name:
     :param key_range: Range of entry keys to delete
+    :param security_origin: *(Optional)* At least and at most one of securityOrigin, storageKey, or storageBucket must be specified. Security origin.
+    :param storage_key: *(Optional)* Storage key.
+    :param storage_bucket: *(Optional)* Storage bucket. If not specified, it uses the default bucket.
     '''
     session = get_session_context('indexed_db.delete_object_store_entries')
-    return await session.execute(cdp.indexed_db.delete_object_store_entries(security_origin, database_name, object_store_name, key_range))
+    return await session.execute(cdp.indexed_db.delete_object_store_entries(database_name, object_store_name, key_range, security_origin, storage_key, storage_bucket))
 
 
 async def disable() -> None:
@@ -85,76 +97,92 @@ async def enable() -> None:
 
 
 async def get_metadata(
-        security_origin: str,
         database_name: str,
-        object_store_name: str
+        object_store_name: str,
+        security_origin: typing.Optional[str] = None,
+        storage_key: typing.Optional[str] = None,
+        storage_bucket: typing.Optional[cdp.storage.StorageBucket] = None
     ) -> typing.Tuple[float, float]:
     '''
-    Gets metadata of an object store
+    Gets metadata of an object store.
 
-    :param security_origin: Security origin.
     :param database_name: Database name.
     :param object_store_name: Object store name.
+    :param security_origin: *(Optional)* At least and at most one of securityOrigin, storageKey, or storageBucket must be specified. Security origin.
+    :param storage_key: *(Optional)* Storage key.
+    :param storage_bucket: *(Optional)* Storage bucket. If not specified, it uses the default bucket.
     :returns: A tuple with the following items:
 
-        0. **entriesCount** – the entries count
-        1. **keyGeneratorValue** – the current value of key generator, to become the next inserted key into the object store. Valid if objectStore.autoIncrement is true.
+        0. **entriesCount** - the entries count
+        1. **keyGeneratorValue** - the current value of key generator, to become the next inserted key into the object store. Valid if objectStore.autoIncrement is true.
     '''
     session = get_session_context('indexed_db.get_metadata')
-    return await session.execute(cdp.indexed_db.get_metadata(security_origin, database_name, object_store_name))
+    return await session.execute(cdp.indexed_db.get_metadata(database_name, object_store_name, security_origin, storage_key, storage_bucket))
 
 
 async def request_data(
-        security_origin: str,
         database_name: str,
         object_store_name: str,
         index_name: str,
         skip_count: int,
         page_size: int,
+        security_origin: typing.Optional[str] = None,
+        storage_key: typing.Optional[str] = None,
+        storage_bucket: typing.Optional[cdp.storage.StorageBucket] = None,
         key_range: typing.Optional[KeyRange] = None
     ) -> typing.Tuple[typing.List[DataEntry], bool]:
     '''
     Requests data from object store or index.
 
-    :param security_origin: Security origin.
     :param database_name: Database name.
     :param object_store_name: Object store name.
     :param index_name: Index name, empty string for object store data requests.
     :param skip_count: Number of records to skip.
     :param page_size: Number of records to fetch.
+    :param security_origin: *(Optional)* At least and at most one of securityOrigin, storageKey, or storageBucket must be specified. Security origin.
+    :param storage_key: *(Optional)* Storage key.
+    :param storage_bucket: *(Optional)* Storage bucket. If not specified, it uses the default bucket.
     :param key_range: *(Optional)* Key range.
     :returns: A tuple with the following items:
 
-        0. **objectStoreDataEntries** – Array of object store data entries.
-        1. **hasMore** – If true, there are more entries to fetch in the given range.
+        0. **objectStoreDataEntries** - Array of object store data entries.
+        1. **hasMore** - If true, there are more entries to fetch in the given range.
     '''
     session = get_session_context('indexed_db.request_data')
-    return await session.execute(cdp.indexed_db.request_data(security_origin, database_name, object_store_name, index_name, skip_count, page_size, key_range))
+    return await session.execute(cdp.indexed_db.request_data(database_name, object_store_name, index_name, skip_count, page_size, security_origin, storage_key, storage_bucket, key_range))
 
 
 async def request_database(
-        security_origin: str,
-        database_name: str
+        database_name: str,
+        security_origin: typing.Optional[str] = None,
+        storage_key: typing.Optional[str] = None,
+        storage_bucket: typing.Optional[cdp.storage.StorageBucket] = None
     ) -> DatabaseWithObjectStores:
     '''
     Requests database with given name in given frame.
 
-    :param security_origin: Security origin.
     :param database_name: Database name.
+    :param security_origin: *(Optional)* At least and at most one of securityOrigin, storageKey, or storageBucket must be specified. Security origin.
+    :param storage_key: *(Optional)* Storage key.
+    :param storage_bucket: *(Optional)* Storage bucket. If not specified, it uses the default bucket.
     :returns: Database with an array of object stores.
     '''
     session = get_session_context('indexed_db.request_database')
-    return await session.execute(cdp.indexed_db.request_database(security_origin, database_name))
+    return await session.execute(cdp.indexed_db.request_database(database_name, security_origin, storage_key, storage_bucket))
 
 
 async def request_database_names(
-        security_origin: str
+        security_origin: typing.Optional[str] = None,
+        storage_key: typing.Optional[str] = None,
+        storage_bucket: typing.Optional[cdp.storage.StorageBucket] = None
     ) -> typing.List[str]:
     '''
     Requests database names for given security origin.
 
-    :param security_origin: Security origin.
+    :param security_origin: *(Optional)* At least and at most one of securityOrigin, storageKey, or storageBucket must be specified. Security origin.
+    :param storage_key: *(Optional)* Storage key.
+    :param storage_bucket: *(Optional)* Storage bucket. If not specified, it uses the default bucket.
     :returns: Database names for origin.
     '''
     session = get_session_context('indexed_db.request_database_names')
-    return await session.execute(cdp.indexed_db.request_database_names(security_origin))
+    return await session.execute(cdp.indexed_db.request_database_names(security_origin, storage_key, storage_bucket))

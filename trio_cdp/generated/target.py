@@ -11,14 +11,15 @@ from ..context import get_connection_context, get_session_context
 import cdp.target
 from cdp.target import (
     AttachedToTarget,
-    BrowserContextID,
     DetachedFromTarget,
+    FilterEntry,
     ReceivedMessageFromTarget,
     RemoteLocation,
     SessionID,
     TargetCrashed,
     TargetCreated,
     TargetDestroyed,
+    TargetFilter,
     TargetID,
     TargetInfo,
     TargetInfoChanged
@@ -57,11 +58,33 @@ async def attach_to_target(
     Attaches to the target with given id.
 
     :param target_id:
-    :param flatten: **(EXPERIMENTAL)** *(Optional)* Enables "flat" access to the session via specifying sessionId attribute in the commands.
+    :param flatten: *(Optional)* Enables "flat" access to the session via specifying sessionId attribute in the commands. We plan to make this the default, deprecate non-flattened mode, and eventually retire it. See crbug.com/991325.
     :returns: Id assigned to the session.
     '''
     connection = get_connection_context('target.attach_to_target')
     return await connection.execute(cdp.target.attach_to_target(target_id, flatten))
+
+
+async def auto_attach_related(
+        target_id: TargetID,
+        wait_for_debugger_on_start: bool,
+        filter_: typing.Optional[TargetFilter] = None
+    ) -> None:
+    '''
+    Adds the specified target to the list of targets that will be monitored for any related target
+    creation (such as child frames, child workers and new versions of service worker) and reported
+    through ``attachedToTarget``. The specified target is also auto-attached.
+    This cancels the effect of any previous ``setAutoAttach`` and is also cancelled by subsequent
+    ``setAutoAttach``. Only available at the Browser target.
+
+    **EXPERIMENTAL**
+
+    :param target_id:
+    :param wait_for_debugger_on_start: Whether to pause new targets when attaching to them. Use ```Runtime.runIfWaitingForDebugger``` to run paused targets.
+    :param filter_: **(EXPERIMENTAL)** *(Optional)* Only targets matching filter will be attached.
+    '''
+    connection = get_connection_context('target.auto_attach_related')
+    return await connection.execute(cdp.target.auto_attach_related(target_id, wait_for_debugger_on_start, filter_))
 
 
 async def close_target(
@@ -71,48 +94,59 @@ async def close_target(
     Closes the target. If the target is a page that gets closed too.
 
     :param target_id:
-    :returns: 
+    :returns: Always set to true. If an error occurs, the response indicates protocol error.
     '''
     connection = get_connection_context('target.close_target')
     return await connection.execute(cdp.target.close_target(target_id))
 
 
-async def create_browser_context() -> BrowserContextID:
+async def create_browser_context(
+        dispose_on_detach: typing.Optional[bool] = None,
+        proxy_server: typing.Optional[str] = None,
+        proxy_bypass_list: typing.Optional[str] = None,
+        origins_with_universal_network_access: typing.Optional[typing.List[str]] = None
+    ) -> cdp.browser.BrowserContextID:
     '''
     Creates a new empty BrowserContext. Similar to an incognito profile but you can have more than
     one.
 
     **EXPERIMENTAL**
 
+    :param dispose_on_detach: *(Optional)* If specified, disposes this context when debugging session disconnects.
+    :param proxy_server: *(Optional)* Proxy server, similar to the one passed to --proxy-server
+    :param proxy_bypass_list: *(Optional)* Proxy bypass list, similar to the one passed to --proxy-bypass-list
+    :param origins_with_universal_network_access: *(Optional)* An optional list of origins to grant unlimited cross-origin access to. Parts of the URL other than those constituting origin are ignored.
     :returns: The id of the context created.
     '''
     connection = get_connection_context('target.create_browser_context')
-    return await connection.execute(cdp.target.create_browser_context())
+    return await connection.execute(cdp.target.create_browser_context(dispose_on_detach, proxy_server, proxy_bypass_list, origins_with_universal_network_access))
 
 
 async def create_target(
         url: str,
         width: typing.Optional[int] = None,
         height: typing.Optional[int] = None,
-        browser_context_id: typing.Optional[BrowserContextID] = None,
+        browser_context_id: typing.Optional[cdp.browser.BrowserContextID] = None,
         enable_begin_frame_control: typing.Optional[bool] = None,
         new_window: typing.Optional[bool] = None,
-        background: typing.Optional[bool] = None
+        background: typing.Optional[bool] = None,
+        for_tab: typing.Optional[bool] = None
     ) -> TargetID:
     '''
     Creates a new page.
 
-    :param url: The initial URL the page will be navigated to.
+    :param url: The initial URL the page will be navigated to. An empty string indicates about:blank.
     :param width: *(Optional)* Frame width in DIP (headless chrome only).
     :param height: *(Optional)* Frame height in DIP (headless chrome only).
-    :param browser_context_id: *(Optional)* The browser context to create the page in.
+    :param browser_context_id: **(EXPERIMENTAL)** *(Optional)* The browser context to create the page in.
     :param enable_begin_frame_control: **(EXPERIMENTAL)** *(Optional)* Whether BeginFrames for this target will be controlled via DevTools (headless chrome only, not supported on MacOS yet, false by default).
     :param new_window: *(Optional)* Whether to create a new Window or Tab (chrome-only, false by default).
     :param background: *(Optional)* Whether to create the target in background or foreground (chrome-only, false by default).
+    :param for_tab: **(EXPERIMENTAL)** *(Optional)* Whether to create the target of type "tab".
     :returns: The id of the page opened.
     '''
     connection = get_connection_context('target.create_target')
-    return await connection.execute(cdp.target.create_target(url, width, height, browser_context_id, enable_begin_frame_control, new_window, background))
+    return await connection.execute(cdp.target.create_target(url, width, height, browser_context_id, enable_begin_frame_control, new_window, background, for_tab))
 
 
 async def detach_from_target(
@@ -130,7 +164,7 @@ async def detach_from_target(
 
 
 async def dispose_browser_context(
-        browser_context_id: BrowserContextID
+        browser_context_id: cdp.browser.BrowserContextID
     ) -> None:
     '''
     Deletes a BrowserContext. All the belonging pages will be closed without calling their
@@ -167,7 +201,7 @@ async def expose_dev_tools_protocol(
     return await connection.execute(cdp.target.expose_dev_tools_protocol(target_id, binding_name))
 
 
-async def get_browser_contexts() -> typing.List[BrowserContextID]:
+async def get_browser_contexts() -> typing.List[cdp.browser.BrowserContextID]:
     '''
     Returns all browser contexts created with ``Target.createBrowserContext`` method.
 
@@ -194,14 +228,17 @@ async def get_target_info(
     return await connection.execute(cdp.target.get_target_info(target_id))
 
 
-async def get_targets() -> typing.List[TargetInfo]:
+async def get_targets(
+        filter_: typing.Optional[TargetFilter] = None
+    ) -> typing.List[TargetInfo]:
     '''
     Retrieves a list of available targets.
 
+    :param filter_: **(EXPERIMENTAL)** *(Optional)* Only targets matching filter will be reported. If filter is not specified and target discovery is currently enabled, a filter used for target discovery is used for consistency.
     :returns: The list of targets.
     '''
     connection = get_connection_context('target.get_targets')
-    return await connection.execute(cdp.target.get_targets())
+    return await connection.execute(cdp.target.get_targets(filter_))
 
 
 async def send_message_to_target(
@@ -211,6 +248,10 @@ async def send_message_to_target(
     ) -> None:
     '''
     Sends protocol message over session with given id.
+    Consider using flat mode instead; see commands attachToTarget, setAutoAttach,
+    and crbug.com/991325.
+
+    .. deprecated:: 1.3
 
     :param message:
     :param session_id: *(Optional)* Identifier of the session.
@@ -223,34 +264,40 @@ async def send_message_to_target(
 async def set_auto_attach(
         auto_attach: bool,
         wait_for_debugger_on_start: bool,
-        flatten: typing.Optional[bool] = None
+        flatten: typing.Optional[bool] = None,
+        filter_: typing.Optional[TargetFilter] = None
     ) -> None:
     '''
     Controls whether to automatically attach to new targets which are considered to be related to
     this one. When turned on, attaches to all existing related targets as well. When turned off,
     automatically detaches from all currently attached targets.
+    This also clears all targets added by ``autoAttachRelated`` from the list of targets to watch
+    for creation of related targets.
 
     **EXPERIMENTAL**
 
     :param auto_attach: Whether to auto-attach to related targets.
     :param wait_for_debugger_on_start: Whether to pause new targets when attaching to them. Use ```Runtime.runIfWaitingForDebugger``` to run paused targets.
-    :param flatten: **(EXPERIMENTAL)** *(Optional)* Enables "flat" access to the session via specifying sessionId attribute in the commands.
+    :param flatten: *(Optional)* Enables "flat" access to the session via specifying sessionId attribute in the commands. We plan to make this the default, deprecate non-flattened mode, and eventually retire it. See crbug.com/991325.
+    :param filter_: **(EXPERIMENTAL)** *(Optional)* Only targets matching filter will be attached.
     '''
     connection = get_connection_context('target.set_auto_attach')
-    return await connection.execute(cdp.target.set_auto_attach(auto_attach, wait_for_debugger_on_start, flatten))
+    return await connection.execute(cdp.target.set_auto_attach(auto_attach, wait_for_debugger_on_start, flatten, filter_))
 
 
 async def set_discover_targets(
-        discover: bool
+        discover: bool,
+        filter_: typing.Optional[TargetFilter] = None
     ) -> None:
     '''
     Controls whether to discover available targets and notify via
     ``targetCreated/targetInfoChanged/targetDestroyed`` events.
 
     :param discover: Whether to discover available targets.
+    :param filter_: **(EXPERIMENTAL)** *(Optional)* Only targets matching filter will be attached. If ```discover```` is false, ````filter``` must be omitted or empty.
     '''
     connection = get_connection_context('target.set_discover_targets')
-    return await connection.execute(cdp.target.set_discover_targets(discover))
+    return await connection.execute(cdp.target.set_discover_targets(discover, filter_))
 
 
 async def set_remote_locations(

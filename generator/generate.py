@@ -79,8 +79,7 @@ def generate_module(root: pathlib.Path, module_name: str,
         file.write('\n\n'.join(commands))
 
 
-def generate_command(module: types.ModuleType, module_name: str, 
-        fn: types.FunctionType):
+def generate_command(module: types.ModuleType, module_name: str, fn: types.FunctionType):
     ''' Generate code for one command, i.e. one PyCDP wrapper function. '''
     fn_name = fn.__name__
     print(f'  - {fn_name}()')
@@ -113,8 +112,11 @@ def generate_command(module: types.ModuleType, module_name: str,
         doc = ''
 
     # The original function returns a generator. We want to grab the return type of the
-    # generator and set that as the return type of this wrapper function.        
-    return_type = format_annotation(module, type_hints['return'].__args__[2])
+    # generator and set that as the return type of this wrapper function.
+    if type_hints.get('return'):
+        return_type = format_annotation(module, type_hints['return'].__args__[2])
+    else:
+        return_type = 'None'
 
     # Format the function and return it as a string.
     ctx_name, ctx_fn = which_context(module_name, fn_name)
@@ -148,6 +150,9 @@ def format_annotation(current_module: types.ModuleType, ann: typing.Any):
     elif ann._name == 'Tuple':
         nested_anns = ', '.join(format_annotation(current_module, a) for a in ann.__args__)
         ann_str = f'typing.Tuple[{nested_anns}]'
+    elif ann._name == 'Optional':
+        nested_ann = format_annotation(current_module, ann.__args__[0])
+        ann_str = f'typing.Optional[{nested_ann}]'
     elif ann._name is None and len(ann.__args__) > 1:
         # For some reason union annotations don't have a name?
         # If the union has two members and one of them is NoneType, then it's really

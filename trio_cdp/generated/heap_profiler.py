@@ -85,13 +85,17 @@ async def get_sampling_profile() -> SamplingHeapProfile:
 
 
 async def start_sampling(
-        sampling_interval: typing.Optional[float] = None
+        sampling_interval: typing.Optional[float] = None,
+        include_objects_collected_by_major_gc: typing.Optional[bool] = None,
+        include_objects_collected_by_minor_gc: typing.Optional[bool] = None
     ) -> None:
     '''
     :param sampling_interval: *(Optional)* Average sample interval in bytes. Poisson distribution is used for the intervals. The default value is 32768 bytes.
+    :param include_objects_collected_by_major_gc: *(Optional)* By default, the sampling heap profiler reports only objects which are still alive when the profile is returned via getSamplingProfile or stopSampling, which is useful for determining what functions contribute the most to steady-state memory usage. This flag instructs the sampling heap profiler to also include information about objects discarded by major GC, which will show which functions cause large temporary memory usage or long GC pauses.
+    :param include_objects_collected_by_minor_gc: *(Optional)* By default, the sampling heap profiler reports only objects which are still alive when the profile is returned via getSamplingProfile or stopSampling, which is useful for determining what functions contribute the most to steady-state memory usage. This flag instructs the sampling heap profiler to also include information about objects discarded by minor GC, which is useful when tuning a latency-sensitive application for minimal GC activity.
     '''
     session = get_session_context('heap_profiler.start_sampling')
-    return await session.execute(cdp.heap_profiler.start_sampling(sampling_interval))
+    return await session.execute(cdp.heap_profiler.start_sampling(sampling_interval, include_objects_collected_by_major_gc, include_objects_collected_by_minor_gc))
 
 
 async def start_tracking_heap_objects(
@@ -115,20 +119,32 @@ async def stop_sampling() -> SamplingHeapProfile:
 
 
 async def stop_tracking_heap_objects(
-        report_progress: typing.Optional[bool] = None
+        report_progress: typing.Optional[bool] = None,
+        treat_global_objects_as_roots: typing.Optional[bool] = None,
+        capture_numeric_value: typing.Optional[bool] = None,
+        expose_internals: typing.Optional[bool] = None
     ) -> None:
     '''
     :param report_progress: *(Optional)* If true 'reportHeapSnapshotProgress' events will be generated while snapshot is being taken when the tracking is stopped.
+    :param treat_global_objects_as_roots: **(DEPRECATED)** *(Optional)* Deprecated in favor of ```exposeInternals```.
+    :param capture_numeric_value: *(Optional)* If true, numerical values are included in the snapshot
+    :param expose_internals: **(EXPERIMENTAL)** *(Optional)* If true, exposes internals of the snapshot.
     '''
     session = get_session_context('heap_profiler.stop_tracking_heap_objects')
-    return await session.execute(cdp.heap_profiler.stop_tracking_heap_objects(report_progress))
+    return await session.execute(cdp.heap_profiler.stop_tracking_heap_objects(report_progress, treat_global_objects_as_roots, capture_numeric_value, expose_internals))
 
 
 async def take_heap_snapshot(
-        report_progress: typing.Optional[bool] = None
+        report_progress: typing.Optional[bool] = None,
+        treat_global_objects_as_roots: typing.Optional[bool] = None,
+        capture_numeric_value: typing.Optional[bool] = None,
+        expose_internals: typing.Optional[bool] = None
     ) -> None:
     '''
     :param report_progress: *(Optional)* If true 'reportHeapSnapshotProgress' events will be generated while snapshot is being taken.
+    :param treat_global_objects_as_roots: **(DEPRECATED)** *(Optional)* If true, a raw snapshot without artificial roots will be generated. Deprecated in favor of ```exposeInternals```.
+    :param capture_numeric_value: *(Optional)* If true, numerical values are included in the snapshot
+    :param expose_internals: **(EXPERIMENTAL)** *(Optional)* If true, exposes internals of the snapshot.
     '''
     session = get_session_context('heap_profiler.take_heap_snapshot')
-    return await session.execute(cdp.heap_profiler.take_heap_snapshot(report_progress))
+    return await session.execute(cdp.heap_profiler.take_heap_snapshot(report_progress, treat_global_objects_as_roots, capture_numeric_value, expose_internals))

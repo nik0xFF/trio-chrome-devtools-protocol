@@ -10,15 +10,47 @@ from ..context import get_connection_context, get_session_context
 
 import cdp.security
 from cdp.security import (
-    CertificateError,
     CertificateErrorAction,
     CertificateId,
+    CertificateSecurityState,
     InsecureContentStatus,
     MixedContentType,
+    SafetyTipInfo,
+    SafetyTipStatus,
     SecurityState,
-    SecurityStateChanged,
-    SecurityStateExplanation
+    SecurityStateExplanation,
+    VisibleSecurityState,
+    VisibleSecurityStateChanged
 )
+
+
+async def CertificateError(
+        event_id: int,
+        error_type: str,
+        request_url: str
+    ) -> None:
+    '''
+    There is a certificate error. If overriding certificate errors is enabled, then it should be
+    handled with the ``handleCertificateError`` command. Note: this event does not fire if the
+    certificate error has been allowed internally. Only one client per target should override
+    certificate errors at the same time.
+    '''
+    session = get_session_context('security.CertificateError')
+    return await session.execute(cdp.security.CertificateError(event_id, error_type, request_url))
+
+
+async def SecurityStateChanged(
+        security_state: SecurityState,
+        scheme_is_cryptographic: bool,
+        explanations: typing.List[SecurityStateExplanation],
+        insecure_content_status: InsecureContentStatus,
+        summary: typing.Optional[str]
+    ) -> None:
+    '''
+    The security state of the page changed. No longer being sent.
+    '''
+    session = get_session_context('security.SecurityStateChanged')
+    return await session.execute(cdp.security.SecurityStateChanged(security_state, scheme_is_cryptographic, explanations, insecure_content_status, summary))
 
 
 async def disable() -> None:
@@ -42,16 +74,13 @@ async def handle_certificate_error(
         action: CertificateErrorAction
     ) -> None:
     '''
-Handles a certificate error that fired a certificateError event.
+    Handles a certificate error that fired a certificateError event.
 
-.. deprecated:: 1.3
+    .. deprecated:: 1.3
 
-:param event_id: The ID of the event.
-:param action: The action to take on the certificate error.
-
-
-.. deprecated:: 1.3
-'''
+    :param event_id: The ID of the event.
+    :param action: The action to take on the certificate error.
+    '''
     session = get_session_context('security.handle_certificate_error')
     return await session.execute(cdp.security.handle_certificate_error(event_id, action))
 
@@ -74,15 +103,12 @@ async def set_override_certificate_errors(
         override: bool
     ) -> None:
     '''
-Enable/disable overriding certificate errors. If enabled, all certificate error events need to
-be handled by the DevTools client and should be answered with ``handleCertificateError`` commands.
+    Enable/disable overriding certificate errors. If enabled, all certificate error events need to
+    be handled by the DevTools client and should be answered with ``handleCertificateError`` commands.
 
-.. deprecated:: 1.3
+    .. deprecated:: 1.3
 
-:param override: If true, certificate errors will be overridden.
-
-
-.. deprecated:: 1.3
-'''
+    :param override: If true, certificate errors will be overridden.
+    '''
     session = get_session_context('security.set_override_certificate_errors')
     return await session.execute(cdp.security.set_override_certificate_errors(override))

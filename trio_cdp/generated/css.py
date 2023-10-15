@@ -11,15 +11,27 @@ from ..context import get_connection_context, get_session_context
 import cdp.css
 from cdp.css import (
     CSSComputedStyleProperty,
+    CSSContainerQuery,
     CSSKeyframeRule,
     CSSKeyframesRule,
+    CSSLayer,
+    CSSLayerData,
     CSSMedia,
+    CSSPositionFallbackRule,
     CSSProperty,
+    CSSPropertyRegistration,
+    CSSPropertyRule,
     CSSRule,
+    CSSRuleType,
+    CSSScope,
     CSSStyle,
     CSSStyleSheetHeader,
+    CSSSupports,
+    CSSTryRule,
     FontFace,
+    FontVariationAxis,
     FontsUpdated,
+    InheritedPseudoElementMatches,
     InheritedStyleEntry,
     MediaQuery,
     MediaQueryExpression,
@@ -31,6 +43,7 @@ from cdp.css import (
     SelectorList,
     ShorthandEntry,
     SourceRange,
+    Specificity,
     StyleDeclarationEdit,
     StyleSheetAdded,
     StyleSheetChanged,
@@ -124,9 +137,9 @@ async def get_background_colors(
     :param node_id: Id of the node to get background colors for.
     :returns: A tuple with the following items:
 
-        0. **backgroundColors** – *(Optional)* The range of background colors behind this element, if it contains any visible text. If no visible text is present, this will be undefined. In the case of a flat background color, this will consist of simply that color. In the case of a gradient, this will consist of each of the color stops. For anything more complicated, this will be an empty array. Images will be ignored (as if the image had failed to load).
-        1. **computedFontSize** – *(Optional)* The computed font size for this node, as a CSS computed value string (e.g. '12px').
-        2. **computedFontWeight** – *(Optional)* The computed font weight for this node, as a CSS computed value string (e.g. 'normal' or '100').
+        0. **backgroundColors** - *(Optional)* The range of background colors behind this element, if it contains any visible text. If no visible text is present, this will be undefined. In the case of a flat background color, this will consist of simply that color. In the case of a gradient, this will consist of each of the color stops. For anything more complicated, this will be an empty array. Images will be ignored (as if the image had failed to load).
+        1. **computedFontSize** - *(Optional)* The computed font size for this node, as a CSS computed value string (e.g. '12px').
+        2. **computedFontWeight** - *(Optional)* The computed font weight for this node, as a CSS computed value string (e.g. 'normal' or '100').
     '''
     session = get_session_context('css.get_background_colors')
     return await session.execute(cdp.css.get_background_colors(node_id))
@@ -155,28 +168,51 @@ async def get_inline_styles_for_node(
     :param node_id:
     :returns: A tuple with the following items:
 
-        0. **inlineStyle** – *(Optional)* Inline style for the specified DOM node.
-        1. **attributesStyle** – *(Optional)* Attribute-defined element style (e.g. resulting from "width=20 height=100%").
+        0. **inlineStyle** - *(Optional)* Inline style for the specified DOM node.
+        1. **attributesStyle** - *(Optional)* Attribute-defined element style (e.g. resulting from "width=20 height=100%").
     '''
     session = get_session_context('css.get_inline_styles_for_node')
     return await session.execute(cdp.css.get_inline_styles_for_node(node_id))
 
 
+async def get_layers_for_node(
+        node_id: cdp.dom.NodeId
+    ) -> CSSLayerData:
+    '''
+    Returns all layers parsed by the rendering engine for the tree scope of a node.
+    Given a DOM element identified by nodeId, getLayersForNode returns the root
+    layer for the nearest ancestor document or shadow root. The layer root contains
+    the full layer tree for the tree scope and their ordering.
+
+    **EXPERIMENTAL**
+
+    :param node_id:
+    :returns: 
+    '''
+    session = get_session_context('css.get_layers_for_node')
+    return await session.execute(cdp.css.get_layers_for_node(node_id))
+
+
 async def get_matched_styles_for_node(
         node_id: cdp.dom.NodeId
-    ) -> typing.Tuple[typing.Optional[CSSStyle], typing.Optional[CSSStyle], typing.Optional[typing.List[RuleMatch]], typing.Optional[typing.List[PseudoElementMatches]], typing.Optional[typing.List[InheritedStyleEntry]], typing.Optional[typing.List[CSSKeyframesRule]]]:
+    ) -> typing.Tuple[typing.Optional[CSSStyle], typing.Optional[CSSStyle], typing.Optional[typing.List[RuleMatch]], typing.Optional[typing.List[PseudoElementMatches]], typing.Optional[typing.List[InheritedStyleEntry]], typing.Optional[typing.List[InheritedPseudoElementMatches]], typing.Optional[typing.List[CSSKeyframesRule]], typing.Optional[typing.List[CSSPositionFallbackRule]], typing.Optional[typing.List[CSSPropertyRule]], typing.Optional[typing.List[CSSPropertyRegistration]], typing.Optional[cdp.dom.NodeId]]:
     '''
     Returns requested styles for a DOM node identified by ``nodeId``.
 
     :param node_id:
     :returns: A tuple with the following items:
 
-        0. **inlineStyle** – *(Optional)* Inline style for the specified DOM node.
-        1. **attributesStyle** – *(Optional)* Attribute-defined element style (e.g. resulting from "width=20 height=100%").
-        2. **matchedCSSRules** – *(Optional)* CSS rules matching this node, from all applicable stylesheets.
-        3. **pseudoElements** – *(Optional)* Pseudo style matches for this node.
-        4. **inherited** – *(Optional)* A chain of inherited styles (from the immediate node parent up to the DOM tree root).
-        5. **cssKeyframesRules** – *(Optional)* A list of CSS keyframed animations matching this node.
+        0. **inlineStyle** - *(Optional)* Inline style for the specified DOM node.
+        1. **attributesStyle** - *(Optional)* Attribute-defined element style (e.g. resulting from "width=20 height=100%").
+        2. **matchedCSSRules** - *(Optional)* CSS rules matching this node, from all applicable stylesheets.
+        3. **pseudoElements** - *(Optional)* Pseudo style matches for this node.
+        4. **inherited** - *(Optional)* A chain of inherited styles (from the immediate node parent up to the DOM tree root).
+        5. **inheritedPseudoElements** - *(Optional)* A chain of inherited pseudo element styles (from the immediate node parent up to the DOM tree root).
+        6. **cssKeyframesRules** - *(Optional)* A list of CSS keyframed animations matching this node.
+        7. **cssPositionFallbackRules** - *(Optional)* A list of CSS position fallbacks matching this node.
+        8. **cssPropertyRules** - *(Optional)* A list of CSS at-property rules matching this node.
+        9. **cssPropertyRegistrations** - *(Optional)* A list of CSS property registrations matching this node.
+        10. **parentLayoutNodeId** - *(Optional)* Id of the first parent element that does not have display: contents.
     '''
     session = get_session_context('css.get_matched_styles_for_node')
     return await session.execute(cdp.css.get_matched_styles_for_node(node_id))
@@ -219,6 +255,25 @@ async def get_style_sheet_text(
     return await session.execute(cdp.css.get_style_sheet_text(style_sheet_id))
 
 
+async def set_container_query_text(
+        style_sheet_id: StyleSheetId,
+        range_: SourceRange,
+        text: str
+    ) -> CSSContainerQuery:
+    '''
+    Modifies the expression of a container query.
+
+    **EXPERIMENTAL**
+
+    :param style_sheet_id:
+    :param range_:
+    :param text:
+    :returns: The resulting CSS container query rule after modification.
+    '''
+    session = get_session_context('css.set_container_query_text')
+    return await session.execute(cdp.css.set_container_query_text(style_sheet_id, range_, text))
+
+
 async def set_effective_property_value_for_node(
         node_id: cdp.dom.NodeId,
         property_name: str,
@@ -253,6 +308,20 @@ async def set_keyframe_key(
     return await session.execute(cdp.css.set_keyframe_key(style_sheet_id, range_, key_text))
 
 
+async def set_local_fonts_enabled(
+        enabled: bool
+    ) -> None:
+    '''
+    Enables/disables rendering of local CSS fonts (enabled by default).
+
+    **EXPERIMENTAL**
+
+    :param enabled: Whether rendering of local fonts is enabled.
+    '''
+    session = get_session_context('css.set_local_fonts_enabled')
+    return await session.execute(cdp.css.set_local_fonts_enabled(enabled))
+
+
 async def set_media_text(
         style_sheet_id: StyleSheetId,
         range_: SourceRange,
@@ -270,6 +339,23 @@ async def set_media_text(
     return await session.execute(cdp.css.set_media_text(style_sheet_id, range_, text))
 
 
+async def set_property_rule_property_name(
+        style_sheet_id: StyleSheetId,
+        range_: SourceRange,
+        property_name: str
+    ) -> Value:
+    '''
+    Modifies the property rule property name.
+
+    :param style_sheet_id:
+    :param range_:
+    :param property_name:
+    :returns: The resulting key text after modification.
+    '''
+    session = get_session_context('css.set_property_rule_property_name')
+    return await session.execute(cdp.css.set_property_rule_property_name(style_sheet_id, range_, property_name))
+
+
 async def set_rule_selector(
         style_sheet_id: StyleSheetId,
         range_: SourceRange,
@@ -285,6 +371,25 @@ async def set_rule_selector(
     '''
     session = get_session_context('css.set_rule_selector')
     return await session.execute(cdp.css.set_rule_selector(style_sheet_id, range_, selector))
+
+
+async def set_scope_text(
+        style_sheet_id: StyleSheetId,
+        range_: SourceRange,
+        text: str
+    ) -> CSSScope:
+    '''
+    Modifies the expression of a scope at-rule.
+
+    **EXPERIMENTAL**
+
+    :param style_sheet_id:
+    :param range_:
+    :param text:
+    :returns: The resulting CSS Scope rule after modification.
+    '''
+    session = get_session_context('css.set_scope_text')
+    return await session.execute(cdp.css.set_scope_text(style_sheet_id, range_, text))
 
 
 async def set_style_sheet_text(
@@ -315,6 +420,25 @@ async def set_style_texts(
     return await session.execute(cdp.css.set_style_texts(edits))
 
 
+async def set_supports_text(
+        style_sheet_id: StyleSheetId,
+        range_: SourceRange,
+        text: str
+    ) -> CSSSupports:
+    '''
+    Modifies the expression of a supports at-rule.
+
+    **EXPERIMENTAL**
+
+    :param style_sheet_id:
+    :param range_:
+    :param text:
+    :returns: The resulting CSS Supports rule after modification.
+    '''
+    session = get_session_context('css.set_supports_text')
+    return await session.execute(cdp.css.set_supports_text(style_sheet_id, range_, text))
+
+
 async def start_rule_usage_tracking() -> None:
     '''
     Enables the selector recording.
@@ -326,7 +450,7 @@ async def start_rule_usage_tracking() -> None:
 async def stop_rule_usage_tracking() -> typing.List[RuleUsage]:
     '''
     Stop tracking rule usage and return the list of rules that were used since last call to
-    ``takeCoverageDelta`` (or since start of coverage instrumentation)
+    ``takeCoverageDelta`` (or since start of coverage instrumentation).
 
     :returns: 
     '''
@@ -334,12 +458,46 @@ async def stop_rule_usage_tracking() -> typing.List[RuleUsage]:
     return await session.execute(cdp.css.stop_rule_usage_tracking())
 
 
-async def take_coverage_delta() -> typing.List[RuleUsage]:
+async def take_computed_style_updates() -> typing.List[cdp.dom.NodeId]:
+    '''
+    Polls the next batch of computed style updates.
+
+    **EXPERIMENTAL**
+
+    :returns: The list of node Ids that have their tracked computed styles updated.
+    '''
+    session = get_session_context('css.take_computed_style_updates')
+    return await session.execute(cdp.css.take_computed_style_updates())
+
+
+async def take_coverage_delta() -> typing.Tuple[typing.List[RuleUsage], float]:
     '''
     Obtain list of rules that became used since last call to this method (or since start of coverage
-    instrumentation)
+    instrumentation).
 
-    :returns: 
+    :returns: A tuple with the following items:
+
+        0. **coverage** - 
+        1. **timestamp** - Monotonically increasing time, in seconds.
     '''
     session = get_session_context('css.take_coverage_delta')
     return await session.execute(cdp.css.take_coverage_delta())
+
+
+async def track_computed_style_updates(
+        properties_to_track: typing.List[CSSComputedStyleProperty]
+    ) -> None:
+    '''
+    Starts tracking the given computed styles for updates. The specified array of properties
+    replaces the one previously specified. Pass empty array to disable tracking.
+    Use takeComputedStyleUpdates to retrieve the list of nodes that had properties modified.
+    The changes to computed style properties are only tracked for nodes pushed to the front-end
+    by the DOM agent. If no changes to the tracked properties occur after the node has been pushed
+    to the front-end, no updates will be issued for the node.
+
+    **EXPERIMENTAL**
+
+    :param properties_to_track:
+    '''
+    session = get_session_context('css.track_computed_style_updates')
+    return await session.execute(cdp.css.track_computed_style_updates(properties_to_track))

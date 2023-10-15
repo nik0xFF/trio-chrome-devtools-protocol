@@ -15,14 +15,18 @@ from cdp.debugger import (
     BreakpointResolved,
     CallFrame,
     CallFrameId,
+    DebugSymbols,
     Location,
+    LocationRange,
     Paused,
     Resumed,
     Scope,
     ScriptFailedToParse,
+    ScriptLanguage,
     ScriptParsed,
     ScriptPosition,
-    SearchMatch
+    SearchMatch,
+    WasmDisassemblyChunk
 )
 
 
@@ -48,6 +52,26 @@ async def disable() -> None:
     return await session.execute(cdp.debugger.disable())
 
 
+async def disassemble_wasm_module(
+        script_id: cdp.runtime.ScriptId
+    ) -> typing.Tuple[typing.Optional[str], int, typing.List[int], WasmDisassemblyChunk]:
+    '''
+
+
+    **EXPERIMENTAL**
+
+    :param script_id: Id of the script to disassemble
+    :returns: A tuple with the following items:
+
+        0. **streamId** - *(Optional)* For large modules, return a stream from which additional chunks of disassembly can be read successively.
+        1. **totalNumberOfLines** - The total number of lines in the disassembly text.
+        2. **functionBodyOffsets** - The offsets of all function bodies, in the format [start1, end1, start2, end2, ...] where all ends are exclusive.
+        3. **chunk** - The first chunk of disassembly.
+    '''
+    session = get_session_context('debugger.disassemble_wasm_module')
+    return await session.execute(cdp.debugger.disassemble_wasm_module(script_id))
+
+
 async def enable(
         max_scripts_cache_size: typing.Optional[float] = None
     ) -> cdp.runtime.UniqueDebuggerId:
@@ -55,7 +79,7 @@ async def enable(
     Enables debugger for the given page. Clients should not assume that the debugging has been
     enabled until the result for this command is received.
 
-    :param max_scripts_cache_size: **(EXPERIMENTAL)** *(Optional)* The maximum size in bytes of collected scripts (not referenced by other heap objects) the debugger can hold. Puts no limit if paramter is omitted.
+    :param max_scripts_cache_size: **(EXPERIMENTAL)** *(Optional)* The maximum size in bytes of collected scripts (not referenced by other heap objects) the debugger can hold. Puts no limit if parameter is omitted.
     :returns: Unique identifier of the debugger.
     '''
     session = get_session_context('debugger.enable')
@@ -87,8 +111,8 @@ async def evaluate_on_call_frame(
     :param timeout: **(EXPERIMENTAL)** *(Optional)* Terminate execution after timing out (number of milliseconds).
     :returns: A tuple with the following items:
 
-        0. **result** – Object wrapper for the evaluation result.
-        1. **exceptionDetails** – *(Optional)* Exception details.
+        0. **result** - Object wrapper for the evaluation result.
+        1. **exceptionDetails** - *(Optional)* Exception details.
     '''
     session = get_session_context('debugger.evaluate_on_call_frame')
     return await session.execute(cdp.debugger.evaluate_on_call_frame(call_frame_id, expression, object_group, include_command_line_api, silent, return_by_value, generate_preview, throw_on_side_effect, timeout))
@@ -114,12 +138,15 @@ async def get_possible_breakpoints(
 
 async def get_script_source(
         script_id: cdp.runtime.ScriptId
-    ) -> str:
+    ) -> typing.Tuple[str, typing.Optional[str]]:
     '''
     Returns source for the script with given id.
 
     :param script_id: Id of the script to get source for.
-    :returns: Script source.
+    :returns: A tuple with the following items:
+
+        0. **scriptSource** - Script source (empty in case of Wasm bytecode).
+        1. **bytecode** - *(Optional)* Wasm bytecode. (Encoded as a base64 string when passed over JSON)
     '''
     session = get_session_context('debugger.get_script_source')
     return await session.execute(cdp.debugger.get_script_source(script_id))
@@ -140,6 +167,39 @@ async def get_stack_trace(
     return await session.execute(cdp.debugger.get_stack_trace(stack_trace_id))
 
 
+async def get_wasm_bytecode(
+        script_id: cdp.runtime.ScriptId
+    ) -> str:
+    '''
+    This command is deprecated. Use getScriptSource instead.
+
+    .. deprecated:: 1.3
+
+    :param script_id: Id of the Wasm script to get source for.
+    :returns: Script source. (Encoded as a base64 string when passed over JSON)
+    '''
+    session = get_session_context('debugger.get_wasm_bytecode')
+    return await session.execute(cdp.debugger.get_wasm_bytecode(script_id))
+
+
+async def next_wasm_disassembly_chunk(
+        stream_id: str
+    ) -> WasmDisassemblyChunk:
+    '''
+    Disassemble the next chunk of lines for the module corresponding to the
+    stream. If disassembly is complete, this API will invalidate the streamId
+    and return an empty chunk. Any subsequent calls for the now invalid stream
+    will return errors.
+
+    **EXPERIMENTAL**
+
+    :param stream_id:
+    :returns: The next chunk of disassembly.
+    '''
+    session = get_session_context('debugger.next_wasm_disassembly_chunk')
+    return await session.execute(cdp.debugger.next_wasm_disassembly_chunk(stream_id))
+
+
 async def pause() -> None:
     '''
     Stops on the next JavaScript statement.
@@ -153,6 +213,8 @@ async def pause_on_async_call(
     ) -> None:
     '''
 
+
+    .. deprecated:: 1.3
 
     **EXPERIMENTAL**
 
@@ -175,28 +237,46 @@ async def remove_breakpoint(
 
 
 async def restart_frame(
-        call_frame_id: CallFrameId
+        call_frame_id: CallFrameId,
+        mode: typing.Optional[str] = None
     ) -> typing.Tuple[typing.List[CallFrame], typing.Optional[cdp.runtime.StackTrace], typing.Optional[cdp.runtime.StackTraceId]]:
     '''
-    Restarts particular call frame from the beginning.
+    Restarts particular call frame from the beginning. The old, deprecated
+    behavior of ``restartFrame`` is to stay paused and allow further CDP commands
+    after a restart was scheduled. This can cause problems with restarting, so
+    we now continue execution immediatly after it has been scheduled until we
+    reach the beginning of the restarted frame.
+
+    To stay back-wards compatible, ``restartFrame`` now expects a ``mode``
+    parameter to be present. If the ``mode`` parameter is missing, ``restartFrame``
+    errors out.
+
+    The various return values are deprecated and ``callFrames`` is always empty.
+    Use the call frames from the ``Debugger#paused`` events instead, that fires
+    once V8 pauses at the beginning of the restarted function.
 
     :param call_frame_id: Call frame identifier to evaluate on.
+    :param mode: **(EXPERIMENTAL)** *(Optional)* The ```mode```` parameter must be present and set to 'StepInto', otherwise ````restartFrame``` will error out.
     :returns: A tuple with the following items:
 
-        0. **callFrames** – New stack trace.
-        1. **asyncStackTrace** – *(Optional)* Async stack trace, if any.
-        2. **asyncStackTraceId** – *(Optional)* Async stack trace, if any.
+        0. **callFrames** - New stack trace.
+        1. **asyncStackTrace** - *(Optional)* Async stack trace, if any.
+        2. **asyncStackTraceId** - *(Optional)* Async stack trace, if any.
     '''
     session = get_session_context('debugger.restart_frame')
-    return await session.execute(cdp.debugger.restart_frame(call_frame_id))
+    return await session.execute(cdp.debugger.restart_frame(call_frame_id, mode))
 
 
-async def resume() -> None:
+async def resume(
+        terminate_on_resume: typing.Optional[bool] = None
+    ) -> None:
     '''
     Resumes JavaScript execution.
+
+    :param terminate_on_resume: *(Optional)* Set to true to terminate execution upon resuming execution. In contrast to Runtime.terminateExecution, this will allows to execute further JavaScript (i.e. via evaluation) until execution of the paused code is actually resumed, at which point termination is triggered. If execution is currently not paused, this parameter has no effect.
     '''
     session = get_session_context('debugger.resume')
-    return await session.execute(cdp.debugger.resume())
+    return await session.execute(cdp.debugger.resume(terminate_on_resume))
 
 
 async def search_in_content(
@@ -276,8 +356,8 @@ async def set_breakpoint(
     :param condition: *(Optional)* Expression to use as a breakpoint condition. When specified, debugger will only stop on the breakpoint if this expression evaluates to true.
     :returns: A tuple with the following items:
 
-        0. **breakpointId** – Id of the created breakpoint for further reference.
-        1. **actualLocation** – Location this breakpoint resolved into.
+        0. **breakpointId** - Id of the created breakpoint for further reference.
+        1. **actualLocation** - Location this breakpoint resolved into.
     '''
     session = get_session_context('debugger.set_breakpoint')
     return await session.execute(cdp.debugger.set_breakpoint(location, condition))
@@ -305,8 +385,8 @@ async def set_breakpoint_by_url(
     :param condition: *(Optional)* Expression to use as a breakpoint condition. When specified, debugger will only stop on the breakpoint if this expression evaluates to true.
     :returns: A tuple with the following items:
 
-        0. **breakpointId** – Id of the created breakpoint for further reference.
-        1. **locations** – List of the locations this breakpoint resolved into upon addition.
+        0. **breakpointId** - Id of the created breakpoint for further reference.
+        1. **locations** - List of the locations this breakpoint resolved into upon addition.
     '''
     session = get_session_context('debugger.set_breakpoint_by_url')
     return await session.execute(cdp.debugger.set_breakpoint_by_url(line_number, url, url_regex, script_hash, column_number, condition))
@@ -360,8 +440,8 @@ async def set_pause_on_exceptions(
         state: str
     ) -> None:
     '''
-    Defines pause on exceptions state. Can be set to stop on all exceptions, uncaught exceptions or
-    no exceptions. Initial pause on exceptions state is ``none``.
+    Defines pause on exceptions state. Can be set to stop on all exceptions, uncaught exceptions,
+    or caught exceptions, no exceptions. Initial pause on exceptions state is ``none``.
 
     :param state: Pause on exceptions mode.
     '''
@@ -386,24 +466,33 @@ async def set_return_value(
 async def set_script_source(
         script_id: cdp.runtime.ScriptId,
         script_source: str,
-        dry_run: typing.Optional[bool] = None
-    ) -> typing.Tuple[typing.Optional[typing.List[CallFrame]], typing.Optional[bool], typing.Optional[cdp.runtime.StackTrace], typing.Optional[cdp.runtime.StackTraceId], typing.Optional[cdp.runtime.ExceptionDetails]]:
+        dry_run: typing.Optional[bool] = None,
+        allow_top_frame_editing: typing.Optional[bool] = None
+    ) -> typing.Tuple[typing.Optional[typing.List[CallFrame]], typing.Optional[bool], typing.Optional[cdp.runtime.StackTrace], typing.Optional[cdp.runtime.StackTraceId], str, typing.Optional[cdp.runtime.ExceptionDetails]]:
     '''
     Edits JavaScript source live.
+
+    In general, functions that are currently on the stack can not be edited with
+    a single exception: If the edited function is the top-most stack frame and
+    that is the only activation of that function on the stack. In this case
+    the live edit will be successful and a ``Debugger.restartFrame`` for the
+    top-most function is automatically triggered.
 
     :param script_id: Id of the script to edit.
     :param script_source: New content of the script.
     :param dry_run: *(Optional)* If true the change will not actually be applied. Dry run may be used to get result description without actually modifying the code.
+    :param allow_top_frame_editing: **(EXPERIMENTAL)** *(Optional)* If true, then ```scriptSource```` is allowed to change the function on top of the stack as long as the top-most stack frame is the only activation of that function.
     :returns: A tuple with the following items:
 
-        0. **callFrames** – *(Optional)* New stack trace in case editing has happened while VM was stopped.
-        1. **stackChanged** – *(Optional)* Whether current call stack  was modified after applying the changes.
-        2. **asyncStackTrace** – *(Optional)* Async stack trace, if any.
-        3. **asyncStackTraceId** – *(Optional)* Async stack trace, if any.
-        4. **exceptionDetails** – *(Optional)* Exception details if any.
+        0. **callFrames** - *(Optional)* New stack trace in case editing has happened while VM was stopped.
+        1. **stackChanged** - *(Optional)* Whether current call stack  was modified after applying the changes.
+        2. **asyncStackTrace** - *(Optional)* Async stack trace, if any.
+        3. **asyncStackTraceId** - *(Optional)* Async stack trace, if any.
+        4. **status** - Whether the operation was successful or not. Only `` Ok`` denotes a successful live edit while the other enum variants denote why the live edit failed.
+        5. **exceptionDetails** - *(Optional)* Exception details if any. Only present when `` status`` is `` CompileError`.
     '''
     session = get_session_context('debugger.set_script_source')
-    return await session.execute(cdp.debugger.set_script_source(script_id, script_source, dry_run))
+    return await session.execute(cdp.debugger.set_script_source(script_id, script_source, dry_run, allow_top_frame_editing))
 
 
 async def set_skip_all_pauses(
@@ -438,15 +527,17 @@ async def set_variable_value(
 
 
 async def step_into(
-        break_on_async_call: typing.Optional[bool] = None
+        break_on_async_call: typing.Optional[bool] = None,
+        skip_list: typing.Optional[typing.List[LocationRange]] = None
     ) -> None:
     '''
     Steps into the function call.
 
-    :param break_on_async_call: **(EXPERIMENTAL)** *(Optional)* Debugger will issue additional Debugger.paused notification if any async task is scheduled before next pause.
+    :param break_on_async_call: **(EXPERIMENTAL)** *(Optional)* Debugger will pause on the execution of the first async task which was scheduled before next pause.
+    :param skip_list: **(EXPERIMENTAL)** *(Optional)* The skipList specifies location ranges that should be skipped on step into.
     '''
     session = get_session_context('debugger.step_into')
-    return await session.execute(cdp.debugger.step_into(break_on_async_call))
+    return await session.execute(cdp.debugger.step_into(break_on_async_call, skip_list))
 
 
 async def step_out() -> None:
@@ -457,9 +548,13 @@ async def step_out() -> None:
     return await session.execute(cdp.debugger.step_out())
 
 
-async def step_over() -> None:
+async def step_over(
+        skip_list: typing.Optional[typing.List[LocationRange]] = None
+    ) -> None:
     '''
     Steps over the statement.
+
+    :param skip_list: **(EXPERIMENTAL)** *(Optional)* The skipList specifies location ranges that should be skipped on step over.
     '''
     session = get_session_context('debugger.step_over')
-    return await session.execute(cdp.debugger.step_over())
+    return await session.execute(cdp.debugger.step_over(skip_list))

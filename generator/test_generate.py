@@ -50,18 +50,17 @@ def test_accessibility_get_partial_ax_tree():
             ) -> typing.List[AXNode]:
             '''
             Fetches the accessibility node and partial accessibility tree for this DOM node, if it exists.
-
+    
             **EXPERIMENTAL**
 
             :param node_id: *(Optional)* Identifier of the node to get the partial accessibility tree for.
             :param backend_node_id: *(Optional)* Identifier of the backend node to get the partial accessibility tree for.
             :param object_id: *(Optional)* JavaScript object id of the node wrapper to get the partial accessibility tree for.
-            :param fetch_relatives: *(Optional)* Whether to fetch this nodes ancestors, siblings and children. Defaults to true.
+            :param fetch_relatives: *(Optional)* Whether to fetch this node's ancestors, siblings and children. Defaults to true.
             :returns: The ``Accessibility.AXNode`` for this DOM node, if it exists, plus its ancestors, siblings and children, if requested.
             '''
             session = get_session_context('accessibility.get_partial_ax_tree')
             return await session.execute(cdp.accessibility.get_partial_ax_tree(node_id, backend_node_id, object_id, fetch_relatives))
     """)
-
-    assert expected == generate_command(cdp.accessibility, 'accessibility',
-        cdp.accessibility.get_partial_ax_tree)
+    command = generate_command(cdp.accessibility, 'accessibility', cdp.accessibility.get_partial_ax_tree)
+    assert expected == command

@@ -15,6 +15,7 @@ from cdp.dom_storage import (
     DomStorageItemUpdated,
     DomStorageItemsCleared,
     Item,
+    SerializedStorageKey,
     StorageId
 )
 

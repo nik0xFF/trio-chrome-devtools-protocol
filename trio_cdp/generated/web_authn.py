@@ -14,6 +14,9 @@ from cdp.web_authn import (
     AuthenticatorProtocol,
     AuthenticatorTransport,
     Credential,
+    CredentialAdded,
+    CredentialAsserted,
+    Ctap2Version,
     VirtualAuthenticatorOptions
 )
 
@@ -65,13 +68,33 @@ async def disable() -> None:
     return await session.execute(cdp.web_authn.disable())
 
 
-async def enable() -> None:
+async def enable(
+        enable_ui: typing.Optional[bool] = None
+    ) -> None:
     '''
     Enable the WebAuthn domain and start intercepting credential storage and
     retrieval with a virtual authenticator.
+
+    :param enable_ui: *(Optional)* Whether to enable the WebAuthn user interface. Enabling the UI is recommended for debugging and demo purposes, as it is closer to the real experience. Disabling the UI is recommended for automated testing. Supported at the embedder's discretion if UI is available. Defaults to false.
     '''
     session = get_session_context('web_authn.enable')
-    return await session.execute(cdp.web_authn.enable())
+    return await session.execute(cdp.web_authn.enable(enable_ui))
+
+
+async def get_credential(
+        authenticator_id: AuthenticatorId,
+        credential_id: str
+    ) -> Credential:
+    '''
+    Returns a single credential stored in the given virtual authenticator that
+    matches the credential ID.
+
+    :param authenticator_id:
+    :param credential_id:
+    :returns: 
+    '''
+    session = get_session_context('web_authn.get_credential')
+    return await session.execute(cdp.web_authn.get_credential(authenticator_id, credential_id))
 
 
 async def get_credentials(
@@ -87,6 +110,20 @@ async def get_credentials(
     return await session.execute(cdp.web_authn.get_credentials(authenticator_id))
 
 
+async def remove_credential(
+        authenticator_id: AuthenticatorId,
+        credential_id: str
+    ) -> None:
+    '''
+    Removes a credential from the authenticator.
+
+    :param authenticator_id:
+    :param credential_id:
+    '''
+    session = get_session_context('web_authn.remove_credential')
+    return await session.execute(cdp.web_authn.remove_credential(authenticator_id, credential_id))
+
+
 async def remove_virtual_authenticator(
         authenticator_id: AuthenticatorId
     ) -> None:
@@ -97,6 +134,39 @@ async def remove_virtual_authenticator(
     '''
     session = get_session_context('web_authn.remove_virtual_authenticator')
     return await session.execute(cdp.web_authn.remove_virtual_authenticator(authenticator_id))
+
+
+async def set_automatic_presence_simulation(
+        authenticator_id: AuthenticatorId,
+        enabled: bool
+    ) -> None:
+    '''
+    Sets whether tests of user presence will succeed immediately (if true) or fail to resolve (if false) for an authenticator.
+    The default is true.
+
+    :param authenticator_id:
+    :param enabled:
+    '''
+    session = get_session_context('web_authn.set_automatic_presence_simulation')
+    return await session.execute(cdp.web_authn.set_automatic_presence_simulation(authenticator_id, enabled))
+
+
+async def set_response_override_bits(
+        authenticator_id: AuthenticatorId,
+        is_bogus_signature: typing.Optional[bool] = None,
+        is_bad_uv: typing.Optional[bool] = None,
+        is_bad_up: typing.Optional[bool] = None
+    ) -> None:
+    '''
+    Resets parameters isBogusSignature, isBadUV, isBadUP to false if they are not present.
+
+    :param authenticator_id:
+    :param is_bogus_signature: *(Optional)* If isBogusSignature is set, overrides the signature in the authenticator response to be zero. Defaults to false.
+    :param is_bad_uv: *(Optional)* If isBadUV is set, overrides the UV bit in the flags in the authenticator response to be zero. Defaults to false.
+    :param is_bad_up: *(Optional)* If isBadUP is set, overrides the UP bit in the flags in the authenticator response to be zero. Defaults to false.
+    '''
+    session = get_session_context('web_authn.set_response_override_bits')
+    return await session.execute(cdp.web_authn.set_response_override_bits(authenticator_id, is_bogus_signature, is_bad_uv, is_bad_up))
 
 
 async def set_user_verified(
