@@ -17,7 +17,7 @@ classifiers = [
 python = "^3.10"
 # poetry remove chrome-devtools-protocol && poetry add /home/nik/IdeaProjects/python-chrome-devtools-protocol/dist/chrome_devtools_protocol-0.6.0-py3-none-any.whl
 trio = "^0.22.2"
-trio_websocket = "^0.11.1"
+trio_websocket = "^0.11.0"
 chrome-devtools-protocol = {path = "/home/nik/IdeaProjects/python-chrome-devtools-protocol/dist/chrome_devtools_protocol-0.6.0-py3-none-any.whl"}
 
 [tool.poetry.dev-dependencies]

@@ -107,7 +107,8 @@ def generate_command(module: types.ModuleType, module_name: str, fn: types.Funct
 
     # Copy docstring.
     if fn.__doc__:
-        doc = "    '''" + fn.__doc__ + "'''\n"
+        doc = fn.__doc__.replace('\x00', '')
+        doc = "    '''" + doc + "'''\n"
     else:
         doc = ''
 
